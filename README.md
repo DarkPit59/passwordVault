@@ -1,7 +1,16 @@
-Ce projet en NodeJs crée un coffre-fort de mots de passe sécurisé.
+**Ce projet en NodeJs crée un coffre-fort de mots de passe sécurisé.**
 
 
-1 - Interface EJS claire et intuitive pour les utilisateurs
+**Prérequis** : Node.js (version LTS recommandée), un gestionnaire de bases de données (DB Browser for SQLite recommandé), l'ensemble des dépendances listées dans package.json, un fichier .env avec l'ensemble des variables d'environnement, un dossier config avec un config.js (contient les variables port, db, secret, smtp) et un dbConfig.js (qui renvoie un objet pool).
+
+La base de données et sa méthode de connexion dépend de l'utilisation que vous souhaitez en faire.
+
+Pour lancer l'application : _node index.js_
+
+**Fonctionnalités** :
+
+
+_1 - Interface EJS claire et intuitive pour les utilisateurs_
 
   En cas d'accès à une page nécessitant une connexion, redirection vers l'écran de connexion
   
@@ -29,7 +38,7 @@ Ce projet en NodeJs crée un coffre-fort de mots de passe sécurisé.
   Ecran Dashboard - Bouton de déconnexion - Travail terminé
   
 
-2 - Fonctionnalités simples et efficaces
+_2 - Fonctionnalités simples et efficaces_
 
   API séparée des écrans - Travail terminé
   
@@ -38,7 +47,7 @@ Ce projet en NodeJs crée un coffre-fort de mots de passe sécurisé.
   Gestion d'un envoi de mail si oubli du mot de passe - fonctionnalité non développée (pas de service mail associé)
   
 
-3 - La sécurité avant tout
+_3 - La sécurité avant tout_
 
   Hashage du mot de passe maître - Travail terminé
 
