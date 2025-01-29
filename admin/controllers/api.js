@@ -133,7 +133,7 @@ async function updatePassword (req, res) {
         const { id } = req.session.user;
         // Vérifier si les deux mots de passe sont identiques
         if (password !== passwordConfirm) {
-            return res.render('views/accountManagement/confirm', { 
+            return res.render('views/dashboard/change', { 
                 message: 'Les deux mots de passe ne correspondent pas.' 
             });
         }
@@ -151,8 +151,7 @@ async function updatePassword (req, res) {
         );
 
         if (user.length === 0) {
-            return res.json({ 
-                success: false, 
+            return res.render('views/dashboard/change', { 
                 message: 'Le mot de passe actuel est incorrect.' 
             });
         }
@@ -166,19 +165,17 @@ async function updatePassword (req, res) {
 
         // Mettre à jour le mot de passe et réinitialiser le token
         await pool.query(
-            'UPDATE pwdvaultUsers SET hashpass = ?, WHERE id = ?',
+            'UPDATE pwdvaultUsers SET hashpass = ? WHERE id = ?',
             [hashedPassword, id]
         );
 
-        return res.json({ 
-            success: true, 
+        return res.render('views/dashboard/change', { 
             message: 'Mot de passe modifié avec succès !' 
         });
 
     } catch (error) {
         console.error('Erreur lors de la mise à jour du mot de passe:', error);
-        return res.json({ 
-            success: false, 
+        return res.render('views/dashboard/change', { 
             message: 'Une erreur est survenue lors du changement de mot de passe. Aucune modification effectuée. Veuillez réessayer ultérieurement.' 
         });
     }
