@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Connexion</title>
+        <link rel="stylesheet" href="/css/login.css">
+    </head>
+    <body>
+        <h1>Connexion</h1>
+        <div class="container">
+            <form action="/api/login" method="POST">
+                <div>
+                    <label>Nom d'utilisateur:</label>
+                    <input type="text" name="username" required>
+                </div>
+                <div>
+                    <label>Mot de passe:</label>
+                    <input type="password" name="password" required>
+                </div>
+                <button type="submit">Se connecter</button>
+            </form>
+        </div>
+        <div class="additional-buttons">
+            <button type="button" class="secondary-button" onclick="window.location.href='/forgotpwd'">Mot de passe oublié ?</button>
+            <button type="button" class="secondary-button" onclick="window.location.href='/register'">Créer mon compte</button>
+        </div>
+    </body>
+</html>

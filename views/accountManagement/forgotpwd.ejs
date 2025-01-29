@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mot de passe oublié</title>
+    <link rel="stylesheet" href="/css/resetpassword.css">
+</head>
+<body>
+    <button onclick="window.location.href='/login'" class="btn-back">< Retour</button>
+    <h2>Réinitialisation du mot de passe</h2>
+    <div class="container">        
+        <div class="form-container">
+            
+            <form action="/api/sendmail" method="POST">
+                <div class="form-group">
+                    <label for="mail">Adresse e-mail :</label>
+                    <input type="email" id="mail" name="mail" required>
+                </div>                
+                <button type="submit" class="btn-submit">
+                    Envoyer un mail de réinitialisation
+                </button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

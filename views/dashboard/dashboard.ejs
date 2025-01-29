@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Menu Principal</title>
+    <link rel="stylesheet" href="/css/dashboard.css">
+</head>
+<body>
+    <h1>Menu Principal</h1>
+    <h2>Bienvenue <%= user.username %> !</h2>
+    <h3>Voici votre coffre-fort de mots de passe personnel.</h3>
+    <div class="container">
+        <a href="/consulter" class="btn">Consulter mes mots de passe</a>
+        <a href="/parametres" class="btn">Modifier mes paramètres</a>
+        <form action="/api/logout" method="POST">
+            <button type="submit" class="btn-logout">Me déconnecter</button>
+        </form>
+    </div>
+</body>
+</html>

@@ -1,0 +1,23 @@
+{
+  "name": "passwordvault",
+  "version": "1.0.0",
+  "description": "Application de gestion de mots de passe",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "dependencies": {
+    "body-parser": "^1.20.2",
+    "crypto": "^1.0.1",
+    "ejs": "^3.1.9",
+    "express": "^4.18.2",
+    "express-session": "^1.17.3",
+    "mysql2": "^3.6.1",
+    "nodemailer": "^6.9.5",
+    "passwordvault": "file:"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}

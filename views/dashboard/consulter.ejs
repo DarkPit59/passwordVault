@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Consultation des mots de passe</title>
+    <link rel="stylesheet" href="/css/dataViewer.css">
+    <script src="/js/dataViewer.js"></script>
+</head>
+<body onload="loadData()">
+    <button onclick="window.location.href='/dashboard'" class="btn-back">< Retour</button>
+    <h2>Mes mots de passe</h2>
+    <p>Vous pouvez <strong>supprimer un mot de passe</strong> en cochant la case à cocher correspondante et en cliquant sur le bouton "<strong>Supprimer</strong>".<br>
+    Vous pouvez également <strong>ajouter un mot de passe</strong> en cliquant sur le bouton "<strong>Ajouter</strong>" et en remplissant les champs, puis en cliquant sur "<strong>Enregistrer</strong>".<br>
+    Cliquez sur votre mot de passe pour le copier dans votre presse-papiers.</p>
+    <div class="container">
+        <table id="passwordTable">
+            <thead>
+                <tr>
+                    <th>Suppr.</th>
+                    <th>Compte</th>
+                    <th>Mot de passe</th>
+                    <th class="hidden-id"></th>
+                </tr>
+            </thead>
+            <tbody id="passwordTableBody">
+                <% data.forEach(function(item) { %>
+                    <tr>
+                        <td><input type="checkbox" class="delete-checkbox"></td>
+                        <td><%= item.account %></td>
+                        <td class="password-cell">
+                            <span class="password-dots">••••••••••••••••</span>
+                            <span class="password-clear"><%= item.cryptedPassword %></span>
+                        </td>
+                        <td class="hidden-id"><%= item.id %></td>
+                    </tr>
+                <% }); %>
+            </tbody>
+        </table>
+
+        <div class="button-container">
+            <button onclick="addNewLine()" class="btn-add">Ajouter</button>
+            <button onclick="saveNewLines()" id="btn-save" class="btn-save" disabled>Enregistrer</button>
+            <button onclick="deleteSelectedLines()" class="btn-delete" disabled>Supprimer</button>
+        </div>
+    </div>
+</body>
+</html>

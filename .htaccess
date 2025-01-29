@@ -1,0 +1,5 @@
+SetEnv NODE_ENV production
+SetEnv PORT 8080
+
+RewriteEngine On
+RewriteRule ^(.*)$ http://127.0.0.1:8080/$1 [P,L] 
