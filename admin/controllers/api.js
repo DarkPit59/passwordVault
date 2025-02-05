@@ -80,7 +80,7 @@ async function decryptPassword(cryptedPassword, hashpass) {
         console.error('Erreur lors du chiffrement des données:', error);
         return {pseudonyme: "", mail: ""};
     }
-}*/
+}
 
 async function readCryptedUserData(userid) {
     try {
@@ -106,7 +106,7 @@ async function readCryptedUserData(userid) {
         console.error('Erreur lors du chiffrement des données:', error);
         return {pseudonyme: "", mail: ""};
     }
-}
+}*/
 
 async function validateMail (mail) {
     try {        
