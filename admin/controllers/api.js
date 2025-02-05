@@ -110,6 +110,7 @@ async function updateCryptedPassword(userid, oldHash, newHash) {
     }
 }
 
+
 async function validateMail (mail) {
     try {        
         // Vérification de l'existence du mail dans la BDD
