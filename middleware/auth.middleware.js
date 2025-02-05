@@ -1,6 +1,6 @@
 function checkAuth(req, res, next) {
     // Liste des routes publiques
-    const publicRoutes = ['/login', '/register', '/forgotpwd', '/api/login', 'api.logout', '/api/verifytoken', '/api/sendmail', '/api/newpassword'];
+    const publicRoutes = ['/login', '/register', '/api/register', '/forgotpwd', '/api/login', '/api/logout', '/api/verifytoken', '/api/sendmail', '/api/newpassword'];
     // console.log(req.path, req.session.user);
     // Si l'utilisateur n'est pas connecté et essaie d'accéder à une route protégée
     if (!req.session.user && !publicRoutes.includes(req.path)) {

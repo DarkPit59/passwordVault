@@ -5,7 +5,11 @@ const mailer = require('./sendMail');
 
 async function encryptDataWithKey(dataToProcess, key){
     try {
-        const iv1 = crypto.randomBytes(16);
+        // Créer un IV déterministe basé sur les données et la clé
+        const baseString = dataToProcess + key;
+        const hash = crypto.createHash('sha256').update(baseString).digest();
+        const iv1 = Buffer.from(hash).subarray(0, 16); // Prendre les 16 premiers octets pour l'IV
+
         const key1 = crypto.scryptSync(key, 'salt', 32);
         const cipher1 = crypto.createCipheriv('aes-256-cbc', key1, iv1);
         let encrypted = cipher1.update(dataToProcess, 'utf8', 'hex');
@@ -39,10 +43,10 @@ async function decryptDataWithKey(dataToProcess, key){
 async function encryptPassword(password, hashpass) {
     try {
         // Première étape : cryptage avec la clé secrète
-        let passwordSecret = encryptDataWithKey(password, config.secret);
+        let passwordSecret = await encryptDataWithKey(password, config.secret);
 
         // Deuxième étape : cryptage avec le hash de l'utilisateur
-        let cryptedPassword = encryptDataWithKey(passwordSecret, hashpass);
+        let cryptedPassword = await encryptDataWithKey(await passwordSecret, hashpass);
 
         return cryptedPassword;
     } catch (error) {
@@ -54,9 +58,9 @@ async function encryptPassword(password, hashpass) {
 async function decryptPassword(cryptedPassword, hashpass) {
     try {
         // Première étape : décryptage avec le hash utilisateur
-        let passwordSecret = decryptDataWithKey(cryptedPassword, hashpass);
+        let passwordSecret = await decryptDataWithKey(cryptedPassword, hashpass);
         // Deuxième étape : décryptage avec la clé secrète
-        let password = decryptDataWithKey(passwordSecret, config.secret);
+        let password = await decryptDataWithKey(await passwordSecret, config.secret);
 
         return password;
     } catch (error) {
@@ -65,48 +69,47 @@ async function decryptPassword(cryptedPassword, hashpass) {
     }
 }
 
-/*async function encryptUserData(data) {
+async function updateCryptedPassword(userid, oldHash, newHash) {
     try {
-        // Récupération des données depuis l'objet data
-        const { mail, pseudonyme } = data;
-
-        // Chiffrement des données
-        const encryptedMail = await encryptDataWithKey(mail, config.secret);
-        const encryptedNick = await encryptDataWithKey(pseudonyme, config.secret);
-
-        return {pseudonyme: encryptedNick, mail: encryptedMail};
-
-    } catch (error) {
-        console.error('Erreur lors du chiffrement des données:', error);
-        return {pseudonyme: "", mail: ""};
-    }
-}
-
-async function readCryptedUserData(userid) {
-    try {
-        // Récupération du mail et du pseudonyme depuis la BDD
-        const userData = await pool.query(
-            'SELECT pseudonyme, mail FROM pwdvaultUsers WHERE id = ?',
+        // 1. Récupérer toutes les données de l'utilisateur
+        const userPasswords = await pool.query(
+            'SELECT id, cryptedPassword FROM pwdvaultData WHERE userid = ?',
             [userid]
         );
 
-        if (userData.length === 0) {
-            throw new Error('Utilisateur non trouvé');
+        if (userPasswords.length === 0) {
+            return true; // Pas de données à mettre à jour
         }
 
-        const { pseudonyme, mail } = userData[0];
+        // 2. Pour chaque mot de passe crypté
+        for (const row of userPasswords) {
+            try {
+                // Décrypter avec l'ancien hash
+                const decryptedPassword = await decryptPassword(row.cryptedPassword, oldHash);
+                
+                // Recrypter avec le nouveau hash
+                const newCryptedPassword = await encryptPassword(decryptedPassword, newHash);
 
-        // Chiffrement des données
-        const decryptedMail = await encryptDataWithKey(mail, config.secret);
-        const decryptedNick = await encryptDataWithKey(pseudonyme, config.secret);
+                // Mettre à jour dans la base de données
+                await pool.query(
+                    'UPDATE pwdvaultData SET cryptedPassword = ? WHERE id = ? AND userid = ?',
+                    [newCryptedPassword, row.id, userid]
+                );
+            } catch (error) {
+                console.error(`Erreur lors du traitement de l'entrée ${row.id}:`, error);
+                // Continue avec les autres entrées même si une échoue
+                continue;
+            }
+        }
 
-        return {pseudonyme: decryptedNick, mail: decryptedMail};
+        return true;
 
     } catch (error) {
-        console.error('Erreur lors du chiffrement des données:', error);
-        return {pseudonyme: "", mail: ""};
+        console.error('Erreur lors de la mise à jour des mots de passe cryptés:', error);
+        throw error;
     }
-}*/
+}
+
 
 async function validateMail (mail) {
     try {        
@@ -115,8 +118,7 @@ async function validateMail (mail) {
             'SELECT id FROM pwdvaultUsers WHERE mail = ?',
             [mail]
         );
-        console.log(`mail : ${mail}`);
-        console.log(`user : ${user}`);
+        
         if (user.length === 0) {
             return false;
         }
@@ -224,6 +226,8 @@ async function updatePassword (req, res) {
             [hashedPassword, id]
         );
 
+        await updateCryptedPassword(id, hashedCurrentPassword, hashedPassword);
+
         return res.render('views/dashboard/change', { 
             message: 'Mot de passe modifié avec succès !' 
         });
@@ -241,6 +245,19 @@ async function changePassword (req, res) {
     try {
         const { token, password } = req.body;
 
+        const user = await pool.query(
+            'SELECT * FROM pwdvaultUsers WHERE reset_token = ?',
+            [token]
+        );
+
+        if (!user) {
+            return res.render('views/accountManagement/confirm', { 
+                message: 'Token incorrect, merci de le revérifier ou de demander une nouvelle réinitialisation.' 
+            });
+        }
+        const id = user.id;
+        const hashedCurrentPassword = user.hashpass;
+
         // Hasher le mot de passe avec la clé secrète
         const hashedPassword = crypto
             .createHmac('sha256', config.secret)
@@ -249,9 +266,11 @@ async function changePassword (req, res) {
 
         // Mettre à jour le mot de passe et réinitialiser le token
         await pool.query(
-            'UPDATE pwdvaultUsers SET hashpass = ?, reset_token = NULL, reset_token_expires = NULL WHERE reset_token = ?',
-            [hashedPassword, token]
+            'UPDATE pwdvaultUsers SET hashpass = ?, reset_token = NULL, reset_token_expires = NULL WHERE reset_token = ? and id = ?',
+            [hashedPassword, token, id]
         );
+
+        await updateCryptedPassword(id, hashedCurrentPassword, hashedPassword);
 
         return res.render('views/accountManagement/confirm', { 
             message: 'Mot de passe modifié avec succès !' 
@@ -369,7 +388,7 @@ async function login (req, res) {
             'SELECT * FROM pwdvaultUsers WHERE pseudonyme = $1 AND hashpass = $2',
             [cryptedName, hash]
         );
-        // console.log(result);
+
         if (result.length > 0) {
             // Authentification réussie
             const pseudonyme = await decryptDataWithKey(result[0].pseudonyme, config.secret);
@@ -430,9 +449,11 @@ async function seeMyData (req, res) {
         // Décrypter les mots de passe pour chaque entrée
         const decryptedResults = await Promise.all(result.map(async (row) => {
             return {
-                ...row,
+                id: row.id,
+                userid: row.userid,
                 account: await decryptDataWithKey(row.account, config.secret),
-                password: await decryptPassword(row.cryptedPassword, hashpass)
+                password: await decryptPassword(row.cryptedPassword, hashpass),
+                comment: await decryptDataWithKey(row.comment, config.secret)
             };
         }));
         
@@ -460,18 +481,23 @@ async function saveData(req, res) {
         
         // Traiter chaque entrée
         for (const item of dataToProcess) {
-            const { account, password } = item;
+            let { account, password, comment } = item;
             
             if (!account || !password) {
                 continue;
             }
+            if (!comment) {
+                comment = "";
+            }
             
+            // Attendre la résolution de chaque promesse
             const cryptedPassword = await encryptPassword(password, hashpass);
             const cryptedAccount = await encryptDataWithKey(account, config.secret);
-            
+            const cryptedComment = await encryptDataWithKey(comment, config.secret);
+
             await pool.query(
-                'INSERT INTO pwdvaultData (userid, account, cryptedPassword) VALUES (?, ?, ?)',
-                [id, cryptedAccount, cryptedPassword]
+                'INSERT INTO pwdvaultData (userid, account, cryptedPassword, comment) VALUES (?, ?, ?, ?)',
+                [id, cryptedAccount, cryptedPassword, cryptedComment]
             );
         }
         

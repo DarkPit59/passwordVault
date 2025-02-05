@@ -18,6 +18,7 @@
                     <th>Suppr.</th>
                     <th>Compte</th>
                     <th>Mot de passe</th>
+                    <th>Commentaire</th>
                     <th class="hidden-id"></th>
                 </tr>
             </thead>
@@ -30,6 +31,7 @@
                             <span class="password-dots">••••••••••••••••</span>
                             <span class="password-clear"><%= item.password %></span>
                         </td>
+                        <td><%= item.comment %></td>
                         <td class="hidden-id"><%= item.id %></td>
                     </tr>
                 <% }); %>
