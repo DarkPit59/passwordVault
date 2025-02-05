@@ -41,6 +41,7 @@ function addNewLine() {
         </td>
         <td><input type="text" class="account-input" placeholder="Compte"></td>
         <td><input type="text" class="password-input" placeholder="Mot de passe"></td>
+        <td><input type="text" class="comment-input" placeholder="Commentaire"></td>
         <td class="hidden-id"></td>
     `;
     
@@ -66,16 +67,15 @@ async function saveNewLines() {
     newLines.forEach(line => {
         const account = line.querySelector('.account-input').value;
         const password = line.querySelector('.password-input').value;
+        const comment = line.querySelector('.comment-input').value;
         if (account && password) {
-            dataToSave.push({ account, password });
+            dataToSave.push({ account, password, comment });
         }
     });
 
     if (dataToSave.length > 0) {
         try {
-            console.log('Données à envoyer:', dataToSave);
             const jsonData = JSON.stringify(dataToSave);
-            console.log('Données JSON:', jsonData);
             
             const response = await fetch('/api/save', {
                 method: 'POST',
