@@ -3,3 +3,4 @@ node_modules/
 *.log
 config/
 admin/localDb.sqlite
+localDb.sqlite

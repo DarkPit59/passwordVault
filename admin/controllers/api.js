@@ -3,23 +3,46 @@ const config = require('../../config/configLocal');
 const { pool } = require('../../config/dbConfigLocal');
 const mailer = require('./sendMail');
 
+async function encryptDataWithKey(dataToProcess, key){
+    try {
+        const iv1 = crypto.randomBytes(16);
+        const key1 = crypto.scryptSync(key, 'salt', 32);
+        const cipher1 = crypto.createCipheriv('aes-256-cbc', key1, iv1);
+        let encrypted = cipher1.update(dataToProcess, 'utf8', 'hex');
+        encrypted += cipher1.final('hex');
+        encrypted = iv1.toString('hex') + ':' + encrypted;
+
+        return encrypted;
+
+    } catch (error) {
+        console.error('Erreur lors du cryptage des données :', error);
+        throw error;
+    }
+}
+
+async function decryptDataWithKey(dataToProcess, key){
+    try {
+        const [iv2Hex, encryptedData2] = dataToProcess.split(':');
+        const iv2 = Buffer.from(iv2Hex, 'hex');
+        const key2 = crypto.scryptSync(key, 'salt', 32);
+        const decipher2 = crypto.createDecipheriv('aes-256-cbc', key2, iv2);
+        let decrypted = decipher2.update(encryptedData2, 'hex', 'utf8');
+        decrypted += decipher2.final('utf8');
+        
+        return decrypted;
+    } catch (error) {
+        console.error('Erreur lors du décryptage des données :', error);
+        throw error;
+    }
+}
+
 async function encryptPassword(password, hashpass) {
     try {
         // Première étape : cryptage avec la clé secrète
-        const iv1 = crypto.randomBytes(16);
-        const key1 = crypto.scryptSync(config.secret, 'salt', 32);
-        const cipher1 = crypto.createCipheriv('aes-256-cbc', key1, iv1);
-        let passwordSecret = cipher1.update(password, 'utf8', 'hex');
-        passwordSecret += cipher1.final('hex');
-        passwordSecret = iv1.toString('hex') + ':' + passwordSecret;
+        let passwordSecret = encryptDataWithKey(password, config.secret);
 
         // Deuxième étape : cryptage avec le hash de l'utilisateur
-        const iv2 = crypto.randomBytes(16);
-        const key2 = crypto.scryptSync(hashpass, 'salt', 32);
-        const cipher2 = crypto.createCipheriv('aes-256-cbc', key2, iv2);
-        let cryptedPassword = cipher2.update(passwordSecret, 'utf8', 'hex');
-        cryptedPassword += cipher2.final('hex');
-        cryptedPassword = iv2.toString('hex') + ':' + cryptedPassword;
+        let cryptedPassword = encryptDataWithKey(passwordSecret, hashpass);
 
         return cryptedPassword;
     } catch (error) {
@@ -31,20 +54,9 @@ async function encryptPassword(password, hashpass) {
 async function decryptPassword(cryptedPassword, hashpass) {
     try {
         // Première étape : décryptage avec le hash utilisateur
-        const [iv2Hex, encryptedData2] = cryptedPassword.split(':');
-        const iv2 = Buffer.from(iv2Hex, 'hex');
-        const key2 = crypto.scryptSync(hashpass, 'salt', 32);
-        const decipher2 = crypto.createDecipheriv('aes-256-cbc', key2, iv2);
-        let passwordSecret = decipher2.update(encryptedData2, 'hex', 'utf8');
-        passwordSecret += decipher2.final('utf8');
-
+        let passwordSecret = decryptDataWithKey(cryptedPassword, hashpass);
         // Deuxième étape : décryptage avec la clé secrète
-        const [iv1Hex, encryptedData1] = passwordSecret.split(':');
-        const iv1 = Buffer.from(iv1Hex, 'hex');
-        const key1 = crypto.scryptSync(config.secret, 'salt', 32);
-        const decipher1 = crypto.createDecipheriv('aes-256-cbc', key1, iv1);
-        let password = decipher1.update(encryptedData1, 'hex', 'utf8');
-        password += decipher1.final('utf8');
+        let password = decryptDataWithKey(passwordSecret, config.secret);
 
         return password;
     } catch (error) {
@@ -52,6 +64,49 @@ async function decryptPassword(cryptedPassword, hashpass) {
         throw error;
     }
 }
+
+/*async function encryptUserData(data) {
+    try {
+        // Récupération des données depuis l'objet data
+        const { mail, pseudonyme } = data;
+
+        // Chiffrement des données
+        const encryptedMail = await encryptDataWithKey(mail, config.secret);
+        const encryptedNick = await encryptDataWithKey(pseudonyme, config.secret);
+
+        return {pseudonyme: encryptedNick, mail: encryptedMail};
+
+    } catch (error) {
+        console.error('Erreur lors du chiffrement des données:', error);
+        return {pseudonyme: "", mail: ""};
+    }
+}
+
+async function readCryptedUserData(userid) {
+    try {
+        // Récupération du mail et du pseudonyme depuis la BDD
+        const userData = await pool.query(
+            'SELECT pseudonyme, mail FROM pwdvaultUsers WHERE id = ?',
+            [userid]
+        );
+
+        if (userData.length === 0) {
+            throw new Error('Utilisateur non trouvé');
+        }
+
+        const { pseudonyme, mail } = userData[0];
+
+        // Chiffrement des données
+        const decryptedMail = await encryptDataWithKey(mail, config.secret);
+        const decryptedNick = await encryptDataWithKey(pseudonyme, config.secret);
+
+        return {pseudonyme: decryptedNick, mail: decryptedMail};
+
+    } catch (error) {
+        console.error('Erreur lors du chiffrement des données:', error);
+        return {pseudonyme: "", mail: ""};
+    }
+}*/
 
 async function validateMail (mail) {
     try {        
@@ -214,10 +269,11 @@ async function createAccount (req, res) {
     try {
         const { username, email, password } = req.body;
 
+        const cryptedMail = await encryptDataWithKey(email, config.secret);
         // Vérifier si l'email existe déjà
         const emailExists = await pool.query(
             'SELECT * FROM pwdvaultUsers WHERE mail = ?',
-            [email]
+            [cryptedMail]
         );
 
         if (emailExists.length > 0) {
@@ -226,10 +282,11 @@ async function createAccount (req, res) {
             });
         }
 
+        const cryptedName = await encryptDataWithKey(username, config.secret);
         // Vérifier si le pseudonyme existe déjà
         const usernameExists = await pool.query(
             'SELECT * FROM pwdvaultUsers WHERE pseudonyme = ?',
-            [username]
+            [cryptedName]
         );
 
         if (usernameExists.length > 0) {
@@ -247,7 +304,7 @@ async function createAccount (req, res) {
         // Insérer le nouvel utilisateur
         await pool.query(
             'INSERT INTO pwdvaultUsers (mail, pseudonyme, hashpass) VALUES (?, ?, ?)',
-            [email, username, hashedPassword]
+            [cryptedMail, cryptedName, hashedPassword]
         );
 
         return res.render('views/accountManagement/confirm', { 
@@ -306,18 +363,21 @@ async function login (req, res) {
             .update(password)
             .digest('hex');
 
+        const cryptedName = await encryptDataWithKey(username, config.secret);
         // Recherche de l'utilisateur dans la base de données
         const result = await pool.query(
             'SELECT * FROM pwdvaultUsers WHERE pseudonyme = $1 AND hashpass = $2',
-            [username, hash]
+            [cryptedName, hash]
         );
         // console.log(result);
         if (result.length > 0) {
             // Authentification réussie
+            const pseudonyme = await decryptDataWithKey(result[0].pseudonyme, config.secret);
+            const mail = await decryptDataWithKey(result[0].mail, config.secret);
             req.session.user = {
                 id: result[0].id,
-                username: result[0].pseudonyme,
-                email: result[0].mail,
+                username: pseudonyme,
+                email: mail,
                 hashpass: result[0].hashpass
             };
             res.redirect('/dashboard'); // Redirection vers le tableau de bord
@@ -371,7 +431,8 @@ async function seeMyData (req, res) {
         const decryptedResults = await Promise.all(result.map(async (row) => {
             return {
                 ...row,
-                cryptedPassword: await decryptPassword(row.cryptedPassword, hashpass)
+                account: await decryptDataWithKey(row.account, config.secret),
+                password: await decryptPassword(row.cryptedPassword, hashpass)
             };
         }));
         
@@ -406,10 +467,11 @@ async function saveData(req, res) {
             }
             
             const cryptedPassword = await encryptPassword(password, hashpass);
+            const cryptedAccount = await encryptDataWithKey(account, config.secret);
             
             await pool.query(
                 'INSERT INTO pwdvaultData (userid, account, cryptedPassword) VALUES (?, ?, ?)',
-                [id, account, cryptedPassword]
+                [id, cryptedAccount, cryptedPassword]
             );
         }
         
